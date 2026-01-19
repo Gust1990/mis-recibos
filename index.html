@@ -161,11 +161,6 @@
             </div>
 
             <div class="form-group">
-                <label>Fecha Cobro</label>
-                <input type="date" id="dateInput">
-            </div>
-
-            <div class="form-group">
                 <label>Neto a Cobrar ($)</label>
                 <input type="number" id="amountInput" placeholder="$ Monto final">
             </div>
@@ -192,7 +187,6 @@
                 <thead>
                     <tr>
                         <th>Período</th>
-                        <th>Fecha</th>
                         <th>Concepto</th>
                         <th>Importe Neto</th>
                         <th>Nota</th>
@@ -231,7 +225,7 @@
 
     // Iniciar fechas
     const today = new Date();
-    document.getElementById('dateInput').valueAsDate = today;
+    // ELIMINADO: document.getElementById('dateInput').valueAsDate = today;
     document.getElementById('periodoInput').value = today.toISOString().slice(0, 7);
 
     let records = [];
@@ -351,6 +345,7 @@
         
         let userRecords = records.filter(r => r.titular === currentUserName || (currentUserKey === 'user1' && r.titular === 'Maria Cabero'));
         
+        // Ordenar por fecha interna (aunque no se muestre)
         userRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
 
         let totalYear = 0;
@@ -362,6 +357,7 @@
         userRecords.forEach((r, i) => {
             totalHistorical += r.amount;
             
+            // Asumiendo que r.date es "YYYY-MM-DD"
             if(parseInt(r.date.split('-')[0]) === currentYear) {
                 totalYear += r.amount;
             }
@@ -389,13 +385,12 @@
             const [pAnio, pMes] = r.period.split('-');
             const periodoVisual = `${pMes}/${pAnio}`;
             
-            const [fAnio, fMes, fDia] = r.date.split('-');
-            const fechaVisual = `${fDia}/${fMes}/${fAnio}`;
+            // ELIMINADO: const [fAnio, fMes, fDia] = r.date.split('-');
+            // ELIMINADO: const fechaVisual = `${fDia}/${fMes}/${fAnio}`;
 
             tbody.innerHTML += `
                 <tr>
                     <td style="font-weight:bold;">${periodoVisual}</td>
-                    <td>${fechaVisual}</td>
                     <td><span class="${tagClass}">${r.concept}</span></td>
                     <td style="font-weight:bold; color:var(--text-main);">$${r.amount.toLocaleString('es-AR')}</td>
                     <td style="color:#78909c; font-style:italic; font-size:0.85em;">${r.note}</td>
@@ -463,7 +458,8 @@
     function addRecord(fileData) {
         const per = document.getElementById('periodoInput').value; 
         const con = document.getElementById('conceptoInput').value;
-        const dat = document.getElementById('dateInput').value;
+        // MODIFICADO: Generamos la fecha del día automáticamente para guardarla internamente
+        const dat = new Date().toISOString().split('T')[0];
         const amt = parseFloat(document.getElementById('amountInput').value);
         const not = document.getElementById('noteInput').value;
         const mep = parseFloat(document.getElementById('mepInput').value) || 1500; 
@@ -475,7 +471,7 @@
             titular: userNames[currentUserKey], 
             period: per,
             concept: con,
-            date: dat,
+            date: dat, // Se guarda oculto para ordenamiento
             amount: amt,
             note: not,
             image: fileData, 
