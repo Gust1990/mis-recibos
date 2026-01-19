@@ -54,6 +54,10 @@
         .card.counter { border-top-color: var(--success); background-color: #e8f5e9; }
         .card.counter p { color: var(--success); font-size: 1.4em; }
         .card.counter h3 { color: #1b5e20; font-weight: bold; }
+        
+        /* Estilo para el día editable */
+        #lblDiaCobro { cursor: pointer; border-bottom: 1px dashed #1b5e20; padding: 0 2px; }
+        #lblDiaCobro:hover { background-color: rgba(0,0,0,0.05); }
 
         /* FORMULARIO */
         .input-panel { background-color: #eceff1; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border: 1px solid #cfd8dc; }
@@ -120,7 +124,7 @@
     <div class="container">
         <div class="stats-grid">
             <div class="card counter">
-                <h3>🗓️ Próximo Cobro (27)</h3>
+                <h3>🗓️ Próximo Cobro (<span id="lblDiaCobro" onclick="cambiarDiaCobro()" title="Toca para cambiar la fecha">27</span>)</h3>
                 <p id="countdownText">Calculando...</p>
             </div>
             
@@ -213,19 +217,21 @@
     const DB_KEY = 'anses_gestion_multi_v2';
     const USERS_KEY = 'anses_users_names';
     
-    // Nombres de usuarios por defecto (se pueden cambiar)
+    // Nombres de usuarios por defecto
     let userNames = JSON.parse(localStorage.getItem(USERS_KEY)) || {
         user1: "MARIA CABERO",
         user2: "USUARIO 2"
     };
 
-    let currentUserKey = "user1"; // Clave interna del usuario actual
+    let currentUserKey = "user1"; 
+    
+    // Recuperar el día de cobro preferido (o usar 27 por defecto)
+    let diaCobroPreferido = parseInt(localStorage.getItem('dia_cobro_app')) || 27;
     /* ================================================= */
 
     // Iniciar fechas
     const today = new Date();
     document.getElementById('dateInput').valueAsDate = today;
-    // Setear input type="month" al mes actual
     document.getElementById('periodoInput').value = today.toISOString().slice(0, 7);
 
     let records = [];
@@ -258,7 +264,7 @@
             userNames[currentUserKey] = nuevoNombre.toUpperCase();
             localStorage.setItem(USERS_KEY, JSON.stringify(userNames));
             actualizarSelectorNombres();
-            render(); // Re-renderizar por si cambia algo visual
+            render(); 
         }
     }
 
@@ -271,25 +277,38 @@
             
             document.getElementById('mepInput').value = precio;
             document.getElementById('cotizInfo').innerText = `Cotización Hoy: $${precio}`;
-            
-            // Recalculamos tabla para actualizar la valoración en USD con el precio real
             render();
         } catch (error) {
             console.log("Error API Dolar, usando offline");
-            document.getElementById('mepInput').value = 1500; // Fallback
+            document.getElementById('mepInput').value = 1500; 
         }
     }
 
-    /* --- CONTADOR DÍA 27 --- */
+    /* --- CONTADOR DINÁMICO --- */
+    function cambiarDiaCobro() {
+        let nuevoDia = prompt("¿Qué día del mes sueles cobrar?", diaCobroPreferido);
+        if (nuevoDia && !isNaN(nuevoDia) && nuevoDia > 0 && nuevoDia <= 31) {
+            diaCobroPreferido = parseInt(nuevoDia);
+            localStorage.setItem('dia_cobro_app', diaCobroPreferido);
+            updateCountdown(); // Recalcular inmediatamente
+        } else if (nuevoDia) {
+            alert("Por favor ingrese un día válido (1 al 31)");
+        }
+    }
+
     function updateCountdown() {
+        // Actualizar el número en el título
+        document.getElementById('lblDiaCobro').innerText = diaCobroPreferido;
+
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth(); 
         
-        let target = new Date(currentYear, currentMonth, 27);
+        // Usar la variable diaCobroPreferido en lugar del 27 fijo
+        let target = new Date(currentYear, currentMonth, diaCobroPreferido);
 
-        if (now.getDate() > 27) {
-            target = new Date(currentYear, currentMonth + 1, 27);
+        if (now.getDate() > diaCobroPreferido) {
+            target = new Date(currentYear, currentMonth + 1, diaCobroPreferido);
         }
 
         const diffTime = target - now;
@@ -328,13 +347,8 @@
         const tbody = document.getElementById('dataTable');
         tbody.innerHTML = '';
         
-        // Filtrar registros por el NOMBRE del usuario actual
-        // (Usamos el nombre como ID lógico para mantener compatibilidad con tu código anterior)
         const currentUserName = userNames[currentUserKey];
         
-        // Filtramos por registros que coincidan con el nombre actual
-        // Ojo: Si cambias el nombre, los registros viejos deben migrarse o coincidir. 
-        // Para simplificar, filtraremos por los registros que tengan el nombre actual O si es "user1" y el registro dice "Maria Cabero" (legacy)
         let userRecords = records.filter(r => r.titular === currentUserName || (currentUserKey === 'user1' && r.titular === 'Maria Cabero'));
         
         userRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -348,12 +362,10 @@
         userRecords.forEach((r, i) => {
             totalHistorical += r.amount;
             
-            // Chequeo de año basado en fecha de cobro
             if(parseInt(r.date.split('-')[0]) === currentYear) {
                 totalYear += r.amount;
             }
             
-            // Calculo USD: Usamos la cotización guardada en el registro, o la de hoy si no existe
             const cotizacionReferencia = r.cotiz || dolarHoy;
             totalUSD += (r.amount / cotizacionReferencia);
 
@@ -374,11 +386,9 @@
                 }
             }
 
-            // Formato Periodo (YYYY-MM a MM/YYYY)
             const [pAnio, pMes] = r.period.split('-');
             const periodoVisual = `${pMes}/${pAnio}`;
             
-            // Formato Fecha
             const [fAnio, fMes, fDia] = r.date.split('-');
             const fechaVisual = `${fDia}/${fMes}/${fAnio}`;
 
@@ -402,8 +412,6 @@
         const count = userRecords.length;
         const avg = count > 0 ? (totalHistorical / count) : 0;
         document.getElementById('statAverage').innerText = '$' + avg.toLocaleString('es-AR', {maximumFractionDigits:0});
-        
-        // Muestra total en Dólares
         document.getElementById('statUSD').innerText = 'u$s ' + totalUSD.toLocaleString('en-US', {maximumFractionDigits:0});
     }
 
@@ -413,7 +421,7 @@
         const file = fileInput.files[0];
 
         if (file) {
-            if(file.size > 3 * 1024 * 1024) { // 3MB Limite
+            if(file.size > 3 * 1024 * 1024) { 
                 alert("⚠️ Archivo muy pesado. Máximo 3MB.");
                 return;
             }
@@ -424,12 +432,11 @@
                 const base64Data = event.target.result;
 
                 if (file.type.startsWith('image/')) {
-                    // Comprimir imagen
                     const img = new Image();
                     img.src = base64Data;
                     img.onload = function () {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; // Calidad aceptable para recibo
+                        const MAX_WIDTH = 800; 
                         const scaleSize = MAX_WIDTH / img.width;
                         if (img.width > MAX_WIDTH) {
                             canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
@@ -454,7 +461,7 @@
     }
 
     function addRecord(fileData) {
-        const per = document.getElementById('periodoInput').value; // YYYY-MM
+        const per = document.getElementById('periodoInput').value; 
         const con = document.getElementById('conceptoInput').value;
         const dat = document.getElementById('dateInput').value;
         const amt = parseFloat(document.getElementById('amountInput').value);
@@ -465,7 +472,7 @@
 
         records.push({
             id: Date.now(),
-            titular: userNames[currentUserKey], // Guardamos con el nombre real
+            titular: userNames[currentUserKey], 
             period: per,
             concept: con,
             date: dat,
