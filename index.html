@@ -225,7 +225,6 @@
 
     // Iniciar fechas
     const today = new Date();
-    // ELIMINADO: document.getElementById('dateInput').valueAsDate = today;
     document.getElementById('periodoInput').value = today.toISOString().slice(0, 7);
 
     let records = [];
@@ -284,21 +283,18 @@
         if (nuevoDia && !isNaN(nuevoDia) && nuevoDia > 0 && nuevoDia <= 31) {
             diaCobroPreferido = parseInt(nuevoDia);
             localStorage.setItem('dia_cobro_app', diaCobroPreferido);
-            updateCountdown(); // Recalcular inmediatamente
+            updateCountdown(); 
         } else if (nuevoDia) {
             alert("Por favor ingrese un día válido (1 al 31)");
         }
     }
 
     function updateCountdown() {
-        // Actualizar el número en el título
         document.getElementById('lblDiaCobro').innerText = diaCobroPreferido;
-
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth(); 
         
-        // Usar la variable diaCobroPreferido en lugar del 27 fijo
         let target = new Date(currentYear, currentMonth, diaCobroPreferido);
 
         if (now.getDate() > diaCobroPreferido) {
@@ -345,8 +341,15 @@
         
         let userRecords = records.filter(r => r.titular === currentUserName || (currentUserKey === 'user1' && r.titular === 'Maria Cabero'));
         
-        // Ordenar por fecha interna (aunque no se muestre)
-        userRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+        // --- ORDENAR POR PERIODO (El más nuevo arriba) ---
+        userRecords.sort((a, b) => {
+            // 1. Primero intenta ordenar por el texto del periodo (YYYY-MM) descendente
+            if (b.period > a.period) return 1;
+            if (b.period < a.period) return -1;
+            
+            // 2. Si es el mismo mes, pone el último agregado (ID mayor) primero
+            return b.id - a.id;
+        });
 
         let totalYear = 0;
         let totalHistorical = 0;
@@ -357,8 +360,7 @@
         userRecords.forEach((r, i) => {
             totalHistorical += r.amount;
             
-            // Asumiendo que r.date es "YYYY-MM-DD"
-            if(parseInt(r.date.split('-')[0]) === currentYear) {
+            if(parseInt(r.period.split('-')[0]) === currentYear) {
                 totalYear += r.amount;
             }
             
@@ -385,9 +387,6 @@
             const [pAnio, pMes] = r.period.split('-');
             const periodoVisual = `${pMes}/${pAnio}`;
             
-            // ELIMINADO: const [fAnio, fMes, fDia] = r.date.split('-');
-            // ELIMINADO: const fechaVisual = `${fDia}/${fMes}/${fAnio}`;
-
             tbody.innerHTML += `
                 <tr>
                     <td style="font-weight:bold;">${periodoVisual}</td>
@@ -458,7 +457,6 @@
     function addRecord(fileData) {
         const per = document.getElementById('periodoInput').value; 
         const con = document.getElementById('conceptoInput').value;
-        // MODIFICADO: Generamos la fecha del día automáticamente para guardarla internamente
         const dat = new Date().toISOString().split('T')[0];
         const amt = parseFloat(document.getElementById('amountInput').value);
         const not = document.getElementById('noteInput').value;
@@ -471,7 +469,7 @@
             titular: userNames[currentUserKey], 
             period: per,
             concept: con,
-            date: dat, // Se guarda oculto para ordenamiento
+            date: dat, 
             amount: amt,
             note: not,
             image: fileData, 
