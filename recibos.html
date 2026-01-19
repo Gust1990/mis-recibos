@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Previsional | Multicuentas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            /* Azul Institucional */
+            --primary: #1565c0; 
+            --primary-dark: #0d47a1;
+            --bg: #f4f6f8;
+            --white: #ffffff;
+            --text-main: #37474f;
+            --danger: #d32f2f;
+            --info: #0288d1;
+            --success: #2e7d32;
+        }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        
+        /* SISTEMA PRINCIPAL */
+        .main-wrapper { max-width: 950px; margin: 0 auto; background: var(--white); border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; display: block; }
+        
+        /* Header Limpio con Selector */
+        .header { background: var(--primary); padding: 20px 25px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        
+        .header h1 { margin: 0; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+        
+        /* Selector de Titular */
+        .user-selector-group { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.15); padding: 5px 15px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); }
+        .user-label { font-size: 0.8em; font-weight: bold; color: rgba(255,255,255,0.9); margin-right: 5px;}
+        .titular-select {
+            background: transparent; border: none; color: white; font-weight: bold; font-size: 0.95em; cursor: pointer; outline: none; text-transform: uppercase;
+        }
+        .titular-select option { color: #333; }
+        .btn-edit-name { background: transparent; border: none; color: white; cursor: pointer; opacity: 0.7; }
+        .btn-edit-name:hover { opacity: 1; }
+
+        .container { padding: 25px; }
+
+        /* KPI CARDS */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { background: white; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #e0e0e0; border-top: 4px solid var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .card h3 { margin: 0 0 10px 0; font-size: 0.75em; color: #78909c; text-transform: uppercase; letter-spacing: 1px; }
+        .card p { margin: 0; font-size: 1.3em; font-weight: bold; color: var(--text-main); }
+        
+        /* ESTILOS ESPECIFICOS TARJETAS */
+        .card.highlight p { color: var(--primary); }
+        .card.usd { border-top-color: #fbc02d; }
+        .card.usd p { color: #f9a825; }
+        
+        /* Tarjeta CONTADOR */
+        .card.counter { border-top-color: var(--success); background-color: #e8f5e9; }
+        .card.counter p { color: var(--success); font-size: 1.4em; }
+        .card.counter h3 { color: #1b5e20; font-weight: bold; }
+
+        /* FORMULARIO */
+        .input-panel { background-color: #eceff1; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border: 1px solid #cfd8dc; }
+        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; }
+        .form-group.small { flex: 0.5; min-width: 100px; }
+        .form-group.full { flex: 100%; }
+        label { font-size: 0.75em; font-weight: bold; color: #546e7a; margin-bottom: 6px; text-transform: uppercase; }
+        input, select { padding: 10px; border: 1px solid #b0bec5; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.95em; outline: none; }
+        input:focus, select:focus { border-color: var(--primary); }
+        
+        .btn-add { background-color: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; height: 42px; font-weight: bold; width: 100%; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s; }
+        .btn-add:hover { background-color: var(--primary-dark); }
+
+        /* TABLA */
+        .table-scroll { overflow-x: auto; border-radius: 8px; border: 1px solid #e0e0e0; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th { text-align: left; padding: 12px 15px; background: #fafafa; color: #546e7a; font-size: 0.8em; text-transform: uppercase; border-bottom: 2px solid #eee; }
+        td { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; vertical-align: middle; }
+        
+        .tag-concepto { padding: 4px 10px; border-radius: 50px; font-size: 0.75em; font-weight: bold; display: inline-block; }
+        .tag-jubilacion { background: #e3f2fd; color: #1565c0; }
+        .tag-pension { background: #e8f5e9; color: #2e7d32; }
+        .tag-bono { background: #fff3e0; color: #ef6c00; }
+        .tag-aguinaldo { background: #f3e5f5; color: #7b1fa2; }
+
+        .btn-action { border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-right: 5px; text-decoration: none; display: inline-block; }
+        .btn-view { background: #e1f5fe; color: var(--info); }
+        .btn-pdf { background: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; }
+        .btn-del { background: #eceff1; color: #546e7a; }
+        .btn-del:hover { background: #cfd8dc; color: var(--danger); }
+
+        /* FOOTER BACKUP */
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .btn-outline { background: transparent; border: 1px solid #90a4ae; color: #607d8b; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* MODAL IMAGEN */
+        #imgModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+        #imgModal img { max-width: 90%; max-height: 80vh; border-radius: 4px; box-shadow: 0 0 25px rgba(0,0,0,0.5); }
+        .close-modal { color: white; margin-top: 20px; font-size: 14px; cursor: pointer; border: 1px solid white; padding: 8px 20px; border-radius: 50px; background: rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+<div id="imgModal" onclick="closeImage()">
+    <img id="modalImageSrc" src="">
+    <div class="close-modal">CERRAR VISTA</div>
+</div>
+
+<div class="main-wrapper" id="appContent">
+    <div class="header">
+        <h1><i class="fas fa-wallet"></i> Mis Recibos</h1>
+        
+        <div class="user-selector-group">
+            <span class="user-label">👤 TITULAR:</span>
+            <select id="activeUser" class="titular-select" onchange="switchUser()">
+                <option value="user1">MARIA CABERO</option>
+                <option value="user2">USUARIO 2</option>
+            </select>
+            <button class="btn-edit-name" onclick="renombrarUsuario()" title="Cambiar nombre"><i class="fas fa-pen"></i></button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="card counter">
+                <h3>🗓️ Próximo Cobro (27)</h3>
+                <p id="countdownText">Calculando...</p>
+            </div>
+            
+            <div class="card highlight"><h3>Acumulado (Año)</h3><p id="statTotalYear">$0</p></div>
+            <div class="card"><h3>Promedio Mensual</h3><p id="statAverage">$0</p></div>
+            <div class="card usd">
+                <h3>Ref. Dólar (MEP)</h3>
+                <p id="statUSD">u$s 0</p>
+                <div id="cotizInfo" style="font-size:0.6rem; color:#999; margin-top:5px;">Cargando cotización...</div>
+            </div>
+        </div>
+
+        <div class="input-panel">
+            <div class="form-group full" style="margin-bottom: 10px;">
+                <label style="color:var(--primary); display:flex; align-items:center; gap:5px;">
+                    <i class="fas fa-user-check"></i> Registrando para: <span id="displayActiveUser" style="text-decoration: underline;">MARIA CABERO</span>
+                </label>
+            </div>
+
+            <div class="form-group small">
+                <label>Periodo</label>
+                <input type="month" id="periodoInput">
+            </div>
+            
+            <div class="form-group">
+                <label>Concepto</label>
+                <select id="conceptoInput">
+                    <option value="Jubilación">Jubilación</option>
+                    <option value="Pensión">Pensión</option>
+                    <option value="Aguinaldo">Aguinaldo (SAC)</option>
+                    <option value="Bono">Bono Extra</option>
+                    <option value="Retroactivo">Retroactivo</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Fecha Cobro</label>
+                <input type="date" id="dateInput">
+            </div>
+
+            <div class="form-group">
+                <label>Neto a Cobrar ($)</label>
+                <input type="number" id="amountInput" placeholder="$ Monto final">
+            </div>
+
+            <div class="form-group" style="min-width: 200px;">
+                <label>Recibo (IMG o PDF)</label>
+                <input type="file" id="fileInput" accept="image/*,application/pdf" style="background:white; padding:7px;">
+            </div>
+
+            <div class="form-group full">
+                <label>Observaciones</label>
+                <input type="text" id="noteInput" placeholder="Ej: Aumento por movilidad...">
+            </div>
+
+            <div class="form-group full">
+                <button class="btn-add" onclick="processEntry()"><i class="fas fa-save"></i> GUARDAR REGISTRO</button>
+            </div>
+            
+            <input type="hidden" id="mepInput" value="0"> 
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>Fecha</th>
+                        <th>Concepto</th>
+                        <th>Importe Neto</th>
+                        <th>Nota</th>
+                        <th style="text-align:center;">Archivo</th>
+                        <th style="text-align:right;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable"></tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <button class="btn-outline" onclick="downloadBackup()"><i class="fas fa-download"></i> Guardar Todo</button>
+            <button class="btn-outline" onclick="document.getElementById('backupInput').click()"><i class="fas fa-upload"></i> Restaurar Todo</button>
+            <input type="file" id="backupInput" accept=".json" style="display: none;" onchange="uploadBackup(this)">
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= CONFIGURACIÓN ================= */
+    const DB_KEY = 'anses_gestion_multi_v2';
+    const USERS_KEY = 'anses_users_names';
+    
+    // Nombres de usuarios por defecto (se pueden cambiar)
+    let userNames = JSON.parse(localStorage.getItem(USERS_KEY)) || {
+        user1: "MARIA CABERO",
+        user2: "USUARIO 2"
+    };
+
+    let currentUserKey = "user1"; // Clave interna del usuario actual
+    /* ================================================= */
+
+    // Iniciar fechas
+    const today = new Date();
+    document.getElementById('dateInput').valueAsDate = today;
+    // Setear input type="month" al mes actual
+    document.getElementById('periodoInput').value = today.toISOString().slice(0, 7);
+
+    let records = [];
+
+    // Carga inicial
+    window.onload = async function() {
+        actualizarSelectorNombres();
+        loadData();
+        updateCountdown();
+        await obtenerDolarApi();
+    };
+
+    /* --- GESTIÓN DE USUARIOS --- */
+    function actualizarSelectorNombres() {
+        const select = document.getElementById('activeUser');
+        select.options[0].text = userNames.user1;
+        select.options[1].text = userNames.user2;
+        document.getElementById('displayActiveUser').innerText = userNames[currentUserKey];
+    }
+
+    function switchUser() {
+        currentUserKey = document.getElementById('activeUser').value;
+        document.getElementById('displayActiveUser').innerText = userNames[currentUserKey];
+        render(); 
+    }
+
+    function renombrarUsuario() {
+        const nuevoNombre = prompt("Ingrese el nombre para este titular:", userNames[currentUserKey]);
+        if (nuevoNombre && nuevoNombre.trim() !== "") {
+            userNames[currentUserKey] = nuevoNombre.toUpperCase();
+            localStorage.setItem(USERS_KEY, JSON.stringify(userNames));
+            actualizarSelectorNombres();
+            render(); // Re-renderizar por si cambia algo visual
+        }
+    }
+
+    /* --- API DOLAR --- */
+    async function obtenerDolarApi() {
+        try {
+            const res = await fetch("https://dolarapi.com/v1/dolares/bolsa");
+            const data = await res.json();
+            const precio = data.venta;
+            
+            document.getElementById('mepInput').value = precio;
+            document.getElementById('cotizInfo').innerText = `Cotización Hoy: $${precio}`;
+            
+            // Recalculamos tabla para actualizar la valoración en USD con el precio real
+            render();
+        } catch (error) {
+            console.log("Error API Dolar, usando offline");
+            document.getElementById('mepInput').value = 1500; // Fallback
+        }
+    }
+
+    /* --- CONTADOR DÍA 27 --- */
+    function updateCountdown() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth(); 
+        
+        let target = new Date(currentYear, currentMonth, 27);
+
+        if (now.getDate() > 27) {
+            target = new Date(currentYear, currentMonth + 1, 27);
+        }
+
+        const diffTime = target - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+        const el = document.getElementById('countdownText');
+        
+        if (diffDays === 0) {
+            el.innerHTML = "<span style='color:#d32f2f'>¡Es Hoy! 🎉</span>";
+        } else if (diffDays === 1) {
+            el.innerText = "Mañana ⏳";
+        } else {
+            el.innerText = "Faltan " + diffDays + " días";
+        }
+    }
+
+    /* --- LOGICA DE DATOS --- */
+    function loadData() {
+        const stored = localStorage.getItem(DB_KEY);
+        if (stored) {
+            records = JSON.parse(stored);
+        } 
+        render();
+    }
+
+    function save() {
+        try {
+            localStorage.setItem(DB_KEY, JSON.stringify(records));
+            render();
+        } catch (e) {
+            alert('⚠️ ¡Memoria llena! Los archivos son muy pesados. Elimina antiguos o descarga el respaldo.');
+        }
+    }
+
+    function render() {
+        const tbody = document.getElementById('dataTable');
+        tbody.innerHTML = '';
+        
+        // Filtrar registros por el NOMBRE del usuario actual
+        // (Usamos el nombre como ID lógico para mantener compatibilidad con tu código anterior)
+        const currentUserName = userNames[currentUserKey];
+        
+        // Filtramos por registros que coincidan con el nombre actual
+        // Ojo: Si cambias el nombre, los registros viejos deben migrarse o coincidir. 
+        // Para simplificar, filtraremos por los registros que tengan el nombre actual O si es "user1" y el registro dice "Maria Cabero" (legacy)
+        let userRecords = records.filter(r => r.titular === currentUserName || (currentUserKey === 'user1' && r.titular === 'Maria Cabero'));
+        
+        userRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        let totalYear = 0;
+        let totalHistorical = 0;
+        let totalUSD = 0;
+        const currentYear = new Date().getFullYear();
+        const dolarHoy = parseFloat(document.getElementById('mepInput').value) || 1500;
+
+        userRecords.forEach((r, i) => {
+            totalHistorical += r.amount;
+            
+            // Chequeo de año basado en fecha de cobro
+            if(parseInt(r.date.split('-')[0]) === currentYear) {
+                totalYear += r.amount;
+            }
+            
+            // Calculo USD: Usamos la cotización guardada en el registro, o la de hoy si no existe
+            const cotizacionReferencia = r.cotiz || dolarHoy;
+            totalUSD += (r.amount / cotizacionReferencia);
+
+            let tagClass = 'tag-concepto';
+            if(r.concept === 'Jubilación') tagClass += ' tag-jubilacion';
+            else if(r.concept === 'Pensión') tagClass += ' tag-pension';
+            else if(r.concept === 'Bono') tagClass += ' tag-bono';
+            else if(r.concept === 'Aguinaldo') tagClass += ' tag-aguinaldo';
+            else tagClass += ' tag-jubilacion';
+
+            let btnFile = `<span style="color:#cfd8dc; font-size:0.8em;">--</span>`;
+            
+            if (r.image) {
+                if(r.image.startsWith('data:application/pdf')) {
+                    btnFile = `<button class="btn-action btn-pdf" onclick="openPdf(${r.id})"><i class="fas fa-file-pdf"></i> PDF</button>`;
+                } else {
+                    btnFile = `<button class="btn-action btn-view" onclick="showImage(${r.id})"><i class="fas fa-eye"></i> Ver</button>`;
+                }
+            }
+
+            // Formato Periodo (YYYY-MM a MM/YYYY)
+            const [pAnio, pMes] = r.period.split('-');
+            const periodoVisual = `${pMes}/${pAnio}`;
+            
+            // Formato Fecha
+            const [fAnio, fMes, fDia] = r.date.split('-');
+            const fechaVisual = `${fDia}/${fMes}/${fAnio}`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight:bold;">${periodoVisual}</td>
+                    <td>${fechaVisual}</td>
+                    <td><span class="${tagClass}">${r.concept}</span></td>
+                    <td style="font-weight:bold; color:var(--text-main);">$${r.amount.toLocaleString('es-AR')}</td>
+                    <td style="color:#78909c; font-style:italic; font-size:0.85em;">${r.note}</td>
+                    <td style="text-align:center;">${btnFile}</td>
+                    <td style="text-align:right;">
+                        <button class="btn-action btn-del" onclick="deleteRec(${r.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('statTotalYear').innerText = '$' + totalYear.toLocaleString('es-AR');
+        
+        const count = userRecords.length;
+        const avg = count > 0 ? (totalHistorical / count) : 0;
+        document.getElementById('statAverage').innerText = '$' + avg.toLocaleString('es-AR', {maximumFractionDigits:0});
+        
+        // Muestra total en Dólares
+        document.getElementById('statUSD').innerText = 'u$s ' + totalUSD.toLocaleString('en-US', {maximumFractionDigits:0});
+    }
+
+    /* --- PROCESAR ENTRADA (IMG O PDF) --- */
+    function processEntry() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+
+        if (file) {
+            if(file.size > 3 * 1024 * 1024) { // 3MB Limite
+                alert("⚠️ Archivo muy pesado. Máximo 3MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (event) {
+                const base64Data = event.target.result;
+
+                if (file.type.startsWith('image/')) {
+                    // Comprimir imagen
+                    const img = new Image();
+                    img.src = base64Data;
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; // Calidad aceptable para recibo
+                        const scaleSize = MAX_WIDTH / img.width;
+                        if (img.width > MAX_WIDTH) {
+                            canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
+                        } else {
+                            canvas.width = img.width; canvas.height = img.height;
+                        }
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        addRecord(canvas.toDataURL('image/jpeg', 0.7)); 
+                    }
+                } 
+                else if (file.type === 'application/pdf') {
+                    addRecord(base64Data);
+                }
+                else {
+                    alert("Solo se admiten Imágenes o PDF.");
+                }
+            }
+        } else {
+            addRecord(null);
+        }
+    }
+
+    function addRecord(fileData) {
+        const per = document.getElementById('periodoInput').value; // YYYY-MM
+        const con = document.getElementById('conceptoInput').value;
+        const dat = document.getElementById('dateInput').value;
+        const amt = parseFloat(document.getElementById('amountInput').value);
+        const not = document.getElementById('noteInput').value;
+        const mep = parseFloat(document.getElementById('mepInput').value) || 1500; 
+
+        if(!per || isNaN(amt)) { alert('⚠️ Faltan datos (Periodo o Monto)'); return; }
+
+        records.push({
+            id: Date.now(),
+            titular: userNames[currentUserKey], // Guardamos con el nombre real
+            period: per,
+            concept: con,
+            date: dat,
+            amount: amt,
+            note: not,
+            image: fileData, 
+            cotiz: mep
+        });
+
+        document.getElementById('amountInput').value = '';
+        document.getElementById('noteInput').value = '';
+        document.getElementById('fileInput').value = '';
+        save();
+    }
+
+    function deleteRec(id) {
+        if(confirm('¿Eliminar registro?')) {
+            records = records.filter(r => r.id !== id);
+            save();
+        }
+    }
+
+    /* --- VISORES --- */
+    function showImage(id) {
+        const r = records.find(rec => rec.id == id);
+        if(r && r.image) {
+            document.getElementById('modalImageSrc').src = r.image;
+            document.getElementById('imgModal').style.display = 'flex';
+        }
+    }
+    
+    function openPdf(id) {
+        const r = records.find(rec => rec.id == id);
+        if(r && r.image) {
+            const win = window.open();
+            win.document.write('<iframe src="' + r.image + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+        }
+    }
+
+    function closeImage() { document.getElementById('imgModal').style.display = 'none'; }
+
+    function downloadBackup() { 
+        const a = document.createElement('a'); 
+        a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records)); 
+        a.download = "Respaldo_Recibos_" + new Date().toISOString().slice(0,10) + ".json"; 
+        a.click(); 
+    }
+    
+    function uploadBackup(input) { 
+        const f = input.files[0]; 
+        if(!f) return; 
+        const r = new FileReader(); 
+        r.onload = e => { 
+            if(confirm('⚠️ ¿Restaurar copia de seguridad? Se reemplazarán los datos actuales.')) { 
+                try { 
+                    records = JSON.parse(e.target.result); 
+                    save(); 
+                    alert('✅ Datos recuperados con éxito.'); 
+                } catch(e) { alert('❌ Archivo dañado o incorrecto.'); } 
+            } 
+        }; 
+        r.readAsText(f); 
+    }
+</script>
+</body>
+</html>
